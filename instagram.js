@@ -10,7 +10,7 @@ const selector = {
     verify: {
       code: "//button[text() = 'Send Security Code']",
       submit: "//button[text() = 'Submit']",
-      type: "input[name=security._code]",
+      type: "input[name=security_code]",
       timeout: 2000
     }
   },
