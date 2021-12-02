@@ -36,16 +36,14 @@ Client.prototype.login = function login(username, password, code)
 {
   new Promise(async(resolve) => {
     try {
-    var browser = await puppeteer.launch(this.OPTIONS.PUPPETEER)
-    this.browser = browser;
-    var page = await this.browser.launch()
-    this.page = page;
-    if (fs.existsSync(this.PATH_SESSION))
+    this.browser = await puppeteer.launch(this.OPTIONS_PUPPETEER)
+    this.page = await this.browser.newPage()
+    if (!fs.existsSync(this.PATH_SESSION))
     {
       await this.page.goto(
       "https://www.instagram.com/accounts/login/"
       )
-      await page.waitForSelector(selector.login.username)
+      await this.page.waitForSelector(selector.login.username)
       await this.page.type(selector.login.username, username)
       await this.page.type(selector.login.password, password)
       await this.page.click(selector.login.submit)
@@ -53,7 +51,7 @@ Client.prototype.login = function login(username, password, code)
       let[verify] = await this.page.$x(selector.acsess.verify.code)
       if (verify || code)
       {
-        buffer = await page.screenshot({ path: "code.png" })
+        buffer = await this.page.screenshot({ path: "code.png" })
         resolve({
           message: "send Security Code",
           image: buffer
@@ -70,14 +68,20 @@ Client.prototype.login = function login(username, password, code)
       }
     } else {
       try {
-        let cookie = fs.reqdFileSync(this.PATH_SESSION);
-        for (let cookies of cookie)
+        let cookie = JSON.parse(fs.readFileSync(this.PATH_SESSION));
+        for (let i = 0; i <cookie.length; i++)
         {
-          await page.setCookie(cookies)
+          await this.page.setCookie(cookie[i])
+          console.log(cookie[i])
         }
-        await page.goto(
+        await this.page.goto(
           "https://www.instagram.com/"
           )
+        resolve({
+          status: true,
+          message: "login suscess",
+          buffer: this.page.screenshot({ path: "up.png" })
+        })
       } catch (e) {
         console.log(e)
         return e.message
@@ -99,10 +103,10 @@ Client.prototype.follow = function follow(username)
       try {
         if (fs.existsSync(this.PATH_SESSION))
         {
-          let cookie = fs.readFileSync(this.PATH_SESSION);
-          for (cookie of cookies)
+        let cookie = JSON.parse(fs.readFileSync(this.PATH_SESSION));
+        for (let i = 0; i <cookie.length; i++)
           {
-            await this.page.setCookie(cookies)
+            await this.page.setCookie(cookie[i])
           }
           await this.page.goto(
             "https://www.instagram.com/" + username
@@ -182,10 +186,10 @@ Client.prototype.dm = function dm(USERNAME_OR_ID, message, type)
     {
       try {
         if (USERNAME_OR_ID) reject(new Error("invalid username or id"))
-        let cookie = fs.readFileSync(this.PATH_SESSION)
-        for (let cookies of cookie)
+        let cookie = JSON.parse(fs.readFileSync(this.PATH_SESSION));
+        for (let i = 0; i <cookie.length; i++)
         {
-          await this.page.setCookie(cookies)
+          await this.page.setCookie(cookie[i])
         }
         await page.goto(
           "https://www.instagram.com/" + USERNAME_OR_ID
@@ -217,4 +221,4 @@ exports.Client = function client(options){
     console.log(e)
     return e
   }
-}
+  }
