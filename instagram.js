@@ -43,6 +43,7 @@ Client.prototype.login = function login(username, password, code)
       await this.page.goto(
       "https://www.instagram.com/accounts/login/"
       )
+      console.log("session no detect")
       await this.page.waitForSelector(selector.login.username)
       await this.page.type(selector.login.username, username)
       await this.page.type(selector.login.password, password)
@@ -51,11 +52,7 @@ Client.prototype.login = function login(username, password, code)
       let[verify] = await this.page.$x(selector.acsess.verify.code)
       if (verify || code)
       {
-        buffer = await this.page.screenshot({ path: "code.png" })
-        resolve({
-          message: "send Security Code",
-          image: buffer
-          });
+        await this.page.screenshot({ path: "code.png" })
         await verify.click()
         await this.page.waitForSelector(selector.acsess.verify.type)
         await this.page.type(selector.acsess.verify.type, code);
@@ -64,32 +61,27 @@ Client.prototype.login = function login(username, password, code)
       } else {
         let cookie = await this.page.cookies();
         fs.writeFileSync(this.PATH_SESSION, JSON.stringify(cookie))
-        resolve("login suscess")
+        console.log("login suscess")
       }
     } else {
       try {
         let cookie = JSON.parse(fs.readFileSync(this.PATH_SESSION));
+        console.log("setting cookies: " + cookie.length)
         for (let i = 0; i <cookie.length; i++)
         {
           await this.page.setCookie(cookie[i])
-          console.log(cookie[i])
         }
+        console.log("set cookie suscess")
         await this.page.goto(
           "https://www.instagram.com/"
           )
-        resolve({
-          status: true,
-          message: "login suscess",
-          buffer: this.page.screenshot({ path: "up.png" })
-        })
+          console.log("login suscess")
       } catch (e) {
         console.log(e)
-        return e.message
       }
     }
     } catch (e) {
       console.log(e)
-      return e.message
     }
   })
 }
@@ -219,6 +211,5 @@ exports.Client = function client(options){
     return new Client(options)
   } catch (e) {
     console.log(e)
-    return e
   }
-  }
+    }
