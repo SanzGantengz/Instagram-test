@@ -23,19 +23,25 @@ const selector = {
     send: "\u000d"
   }
 }
-function Client(options)
+function Client(options, page)
 {
+  new Promise(async() => {
   this._options = options;
-  this.page = null;
-  this.browser = null;
-  this.OPTIONS_PUPPETEER = this._options.launch = { args: ["--no-sandbox", "--disable-gpu", "--disable-setuid-sandbox" ]};
+  this.OPTIONS_PUPPETEER = this._options.launch;
   this.PATH_SESSION = this._options.PATH_SESSION = process.cwd() + "/INSTAGRAM_LOGIN.json";
+  this._username;
+  this._password;
+  this.browser;
+  this.page;
+  })
 }
 
 Client.prototype.login = function login(username, password, code)
 {
   new Promise(async(resolve) => {
     try {
+    this._username = username;
+    this._password = password;
     this.browser = await puppeteer.launch(this.OPTIONS_PUPPETEER)
     this.page = await this.browser.newPage()
     if (!fs.existsSync(this.PATH_SESSION))
@@ -75,6 +81,7 @@ Client.prototype.login = function login(username, password, code)
         await this.page.goto(
           "https://www.instagram.com/"
           )
+        await this.page.screenshot({ path: "login.png" })
           console.log("login suscess")
       } catch (e) {
         console.log(e)
@@ -127,10 +134,11 @@ Client.prototype.follow = function follow(username)
             }
         }
         else {
-          reject({
-            status: false,
-            message: "not logged in yet"
-          })
+          try{
+        login(this._username, this._password)
+      }catch(e){
+        console.log(e)
+        }
         }
     } catch (e) {
       console.log(e)
@@ -146,9 +154,9 @@ Client.prototype.actifity = function actifity()
     {
       try {
         await this.page.goto(
-          "https://www.instagram.com/accounts/activity/"
+        "https://www.instagram.com/accounts/activity/"
           )
-          resolve({
+          /*resolve({
             status: true,
             message: {
               message: "soon",
@@ -157,35 +165,43 @@ Client.prototype.actifity = function actifity()
                 buffer: this.page.screenshot({ path: "actifity.png" })
               }
             }
-          })
+          })*/
+        this.page.screenshot({ path: "actifity.png" })
       } 
       catch (e) {
         reject(e)
       }
     } 
     else {
-      reject({
-        status: false,
-        message: "login first"
-      })
+     await login(this._username, this._password)
     }
   })
 }
 Client.prototype.dm = function dm(USERNAME_OR_ID, message, type)
 {
+  if (!USERNAME_OR_ID) reject(new Error("invalid username or id"))
+  if (!message) reject(new Error("no message"))
+if (!type) reject(new Error("no type"))
   new Promise(async(resolve, reject) => {
     if (fs.existsSync(this.PATH_SESSION))
     {
       try {
-        if (USERNAME_OR_ID) reject(new Error("invalid username or id"))
+        
+        this.login(this._username, this._password)
         let cookie = JSON.parse(fs.readFileSync(this.PATH_SESSION));
         for (let i = 0; i <cookie.length; i++)
         {
+          this.browser = await puppeteer.launch(this.OPTIONS_PUPPETEER)
+          this.page = await this.browser.newPage()
           await this.page.setCookie(cookie[i])
         }
-        await page.goto(
+        await this.page.goto(
           "https://www.instagram.com/" + USERNAME_OR_ID
           )
+        let[dm]=await this.page.$x(selector.dm.messager)
+        if (dm){
+          await dm.click()
+        }
           if (type === "text")
           {
             await page.type(selector.message.TYPE_AND_SEND, message)
@@ -194,17 +210,21 @@ Client.prototype.dm = function dm(USERNAME_OR_ID, message, type)
           {
             reject("blom jadi")
           }
+        await this.page.screenshot({ path: "dm.png" })
+        console.log("dm to " + USERNAME_OR_ID + " suscess")
       } catch (e) {
         reject(e)
       }
     } else {
-      reject({
-        status: false,
-        message: "login first"
-      })
+      try{
+        this.login(this._username, this._password)
+      }catch(e){
+        console.log(e)
+      }
     }
   })
 }
+
 
 exports.Client = function client(options){
   try {
@@ -212,4 +232,4 @@ exports.Client = function client(options){
   } catch (e) {
     console.log(e)
   }
-    }
+  }
